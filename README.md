@@ -3,7 +3,7 @@ Repositório do projeto intermédio de Programação 3 [Processing]
 
 ## Execução
 1. Instalar o Processing (Java mode) e a biblioteca **Sound**.
-2. Abrir `/home/runner/work/p3-intermedio/p3-intermedio/p3_intermedio.pde` no Processing.
+2. Abrir `p3_intermedio.pde` no Processing.
 3. (Opcional) colocar `soundtrack.mp3` na pasta `data/` do sketch.
 4. Executar o sketch.
 
@@ -13,7 +13,7 @@ Repositório do projeto intermédio de Programação 3 [Processing]
 - **Utilizador**: posição do rato altera energia, cor e dinâmica visual.
 
 ## Exportação da sequência de imagens
-- Tecla **`R`** inicia/parar gravação dos frames (`renders/frame-######.png`).
+- Tecla **`R`** inicia/para gravação dos frames (`renders/frame-######.png`).
 - A gravação só pode ser parada manualmente após **90s**.
 - A gravação é parada automaticamente aos **180s**.
 
