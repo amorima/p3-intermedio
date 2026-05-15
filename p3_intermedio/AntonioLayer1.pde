@@ -150,40 +150,49 @@ class QuadA1 {
     pg.strokeWeight(sw);
 
     switch (kind) {
-      case 0: {  // quadrado pulsante + X — escala respira com bass, rotação lenta
-        pg.rotate(rot);
-        float scale0 = 1.0 + audioBass * 0.35 + sin(phase + frameCount * 0.04) * 0.05;
-        float ss = s * scale0;
-        pg.rect(-ss, -ss, ss * 2, ss * 2);
-        pg.line(-ss, -ss,  ss,  ss);
-        pg.line( ss, -ss, -ss,  ss);
+      case 0: {  // quadrados concêntricos — moldura estática + 2 rodam em sentidos opostos
+        // Exterior — estático, dá uma "moldura" que ancora a célula
+        pg.rect(-s, -s, s * 2, s * 2);
+
+        // Médio — roda lento no sentido do rot da célula
+        pg.pushMatrix();
+        pg.rotate(rot * 0.7);
+        float mid = s * 0.65;
+        pg.rect(-mid, -mid, mid * 2, mid * 2);
+        pg.popMatrix();
+
+        // Interior — roda em sentido contrário, pulsa com bass
+        pg.pushMatrix();
+        pg.rotate(-rot * 1.2);
+        float inner0 = s * (0.32 + audioBass * 0.18);
+        pg.rect(-inner0, -inner0, inner0 * 2, inner0 * 2);
+        pg.popMatrix();
         break;
       }
 
       case 1: {  // círculos concêntricos — núcleo pulsa com bass (intocado)
+        pg.pushMatrix();
         pg.rotate(rot * 0.3);
         pg.ellipse(0, 0, s * 2, s * 2);
         float inner = s * (0.25 + audioBass * 0.55);
         pg.ellipse(0, 0, inner * 2, inner * 2);
+        pg.popMatrix();
         break;
       }
 
-      case 2: {  // linhas-scanline — não roda, linhas deslizam verticalmente no quadrado
-        pg.rect(-s, -s, s * 2, s * 2);          // moldura estática
-        int lines = 4 + int(audioTreble * 5);
-        float stride = (s * 2) / lines;
-        // Velocidade de scroll com mids; fase única por célula (phase)
-        float scroll = (frameCount * (0.5 + audioMids * 2.0) + phase * 50.0) % stride;
-        if (scroll < 0) scroll += stride;
-        for (int i = -1; i <= lines + 1; i++) {
-          float t = -s + i * stride - scroll;
-          if (t < -s || t > s) continue;
-          pg.line(-s, t, s, t);
-        }
+      case 2: {  // crosshair — sem rotação, braços vertical/horizontal independentes
+        float armV = s * (0.55 + audioBass * 0.45);    // bass estica o braço vertical
+        float armH = s * (0.55 + audioTreble * 0.45);  // treble estica o horizontal
+        pg.line(0, -armV, 0, armV);
+        pg.line(-armH, 0, armH, 0);
+        // pequena âncora central
+        float anchor = s * 0.08;
+        pg.rect(-anchor, -anchor, anchor * 2, anchor * 2);
         break;
       }
 
       case 3: {  // polígono que respira — vértices oscilam independentemente
+        pg.pushMatrix();
         pg.rotate(rot * 0.5);
         int n = 6;
         pg.beginShape();
@@ -195,6 +204,7 @@ class QuadA1 {
           pg.vertex(cos(a) * s * breath, sin(a) * s * breath);
         }
         pg.endShape(CLOSE);
+        pg.popMatrix();
         break;
       }
     }
