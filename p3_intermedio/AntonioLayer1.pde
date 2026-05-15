@@ -5,20 +5,9 @@
 // células voltam a fundir-se. Em cada folha desenha-se uma forma geométrica
 // que reage a bass / mids / treble.
 
-// Paleta — declarada aqui (não no principal) porque o cross-tab anda a falhar.
-// Quando renomearmos a pasta para `p3_intermedio`, isto pode voltar ao main.
-color[] paleta = {
-  #0A0A1E,   // fundo profundo
-  #00DCFF,   // ciano
-  #FF3C6E,   // magenta quente
-  #B400FF,   // violeta
-  #FFDC00,   // amarelo
-  #FFFFFF    // branco
-};
-
 final int   A1_MAX_DEPTH    = 6;        // 4^6 = 4096 folhas no pior caso
 final float A1_MERGE_RATE   = 0.018;    // prob/frame de fusão quando a calma é máxima
-final float A1_ROT_BASE     = 0.012;
+final float A1_ROT_BASE     = 0.005;    // rotação base (5× mais lenta que antes)
 final float A1_TRAIL_ALPHA  = 35;       // alpha do fade do fundo
 
 QuadA1 a1Root;
@@ -75,6 +64,7 @@ class QuadA1 {
   float rot, rotSpeed;
   int kind;       // 0..3 → família de forma
   float life;     // 0..1 → recém-subdividida (flash branco)
+  float phase;    // 0..TWO_PI → fase determinística por célula (anima sub-forma)
 
   QuadA1(float x, float y, float w, float h, int depth) {
     this.x = x; this.y = y; this.w = w; this.h = h;
@@ -86,6 +76,7 @@ class QuadA1 {
     this.rotSpeed = random(-A1_ROT_BASE, A1_ROT_BASE);
     this.kind = int(random(4));
     this.life = 1;
+    this.phase = random(TWO_PI);   // fase única para animações sub-forma
   }
 
   void collectLeaves(ArrayList<QuadA1> acc) {
@@ -112,8 +103,8 @@ class QuadA1 {
     if (split) {
       for (QuadA1 k : kids) k.update();
     } else {
-      // Mids → velocidade de rotação
-      rot += rotSpeed * (1 + audioMids * 5);
+      // Rotação lenta — só os mids dão um leve boost
+      rot += rotSpeed * (0.6 + audioMids * 0.8);
       life *= 0.94;
     }
   }
@@ -142,10 +133,9 @@ class QuadA1 {
   void drawLeaf(PGraphics pg) {
     pg.pushMatrix();
     pg.translate(x + w * 0.5, y + h * 0.5);
-    pg.rotate(rot);
 
     float s = min(w, h) * 0.45;
-    float sw = 1 + audioTreble * 4 + audioBass * 2;
+    float sw = 1 + audioTreble * 3 + audioBass * 1.5;
 
     // Cor com pitch — desloca o tom em função do bin dominante
     float pitchShift = map(audioDominantBin, 0, FFT_BANDS, -60, 60);
@@ -160,35 +150,53 @@ class QuadA1 {
     pg.strokeWeight(sw);
 
     switch (kind) {
-      case 0:  // rectângulo com aspas em cruz
-        pg.rect(-s, -s, s * 2, s * 2);
-        pg.line(-s, -s,  s,  s);
-        pg.line( s, -s, -s,  s);
+      case 0: {  // quadrado pulsante + X — escala respira com bass, rotação lenta
+        pg.rotate(rot);
+        float scale0 = 1.0 + audioBass * 0.35 + sin(phase + frameCount * 0.04) * 0.05;
+        float ss = s * scale0;
+        pg.rect(-ss, -ss, ss * 2, ss * 2);
+        pg.line(-ss, -ss,  ss,  ss);
+        pg.line( ss, -ss, -ss,  ss);
         break;
+      }
 
-      case 1:  // círculo concêntrico — interno pulsa com bass
+      case 1: {  // círculos concêntricos — núcleo pulsa com bass (intocado)
+        pg.rotate(rot * 0.3);
         pg.ellipse(0, 0, s * 2, s * 2);
         float inner = s * (0.25 + audioBass * 0.55);
         pg.ellipse(0, 0, inner * 2, inner * 2);
         break;
+      }
 
-      case 2:  // grelha de linhas paralelas — densidade com treble
-        int lines = 3 + int(audioTreble * 6);
-        for (int i = 0; i < lines; i++) {
-          float t = map(i, 0, max(lines - 1, 1), -s, s);
+      case 2: {  // linhas-scanline — não roda, linhas deslizam verticalmente no quadrado
+        pg.rect(-s, -s, s * 2, s * 2);          // moldura estática
+        int lines = 4 + int(audioTreble * 5);
+        float stride = (s * 2) / lines;
+        // Velocidade de scroll com mids; fase única por célula (phase)
+        float scroll = (frameCount * (0.5 + audioMids * 2.0) + phase * 50.0) % stride;
+        if (scroll < 0) scroll += stride;
+        for (int i = -1; i <= lines + 1; i++) {
+          float t = -s + i * stride - scroll;
+          if (t < -s || t > s) continue;
           pg.line(-s, t, s, t);
         }
         break;
+      }
 
-      case 3:  // polígono regular — n-lados varia com mids
+      case 3: {  // polígono que respira — vértices oscilam independentemente
+        pg.rotate(rot * 0.5);
+        int n = 6;
         pg.beginShape();
-        int n = 5 + int(audioMids * 4);
         for (int i = 0; i < n; i++) {
           float a = TWO_PI * i / n - HALF_PI;
-          pg.vertex(cos(a) * s, sin(a) * s);
+          // cada vértice respira em fase própria — uma onda viaja à volta
+          float breath = 1.0 + sin(phase + frameCount * 0.05 + i * TWO_PI / n)
+                             * (0.15 + audioBass * 0.30);
+          pg.vertex(cos(a) * s * breath, sin(a) * s * breath);
         }
         pg.endShape(CLOSE);
         break;
+      }
     }
 
     // Flash branco no contorno da célula quando acabou de mudar de estado

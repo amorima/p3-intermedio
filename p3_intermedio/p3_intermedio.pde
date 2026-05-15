@@ -15,6 +15,16 @@ PGraphics gL1, gL2, gL3;
 // Visibilidade — só Antonio1 ligada à partida; 1..6 alterna no teclado
 boolean[] layerOn = { true, false, false, false, false, false };
 
+// --- Paleta global (3 a 8 cores, requisito do enunciado) ---
+color[] paleta = {
+  #0A0A1E,   // fundo profundo
+  #00DCFF,   // ciano
+  #FF3C6E,   // magenta quente
+  #B400FF,   // violeta
+  #FFDC00,   // amarelo
+  #FFFFFF    // branco
+};
+
 // --- HUD de debug ---
 boolean mostrarHUD = true;
 
@@ -34,7 +44,7 @@ void setup() {
 }
 
 void draw() {
-  background(#0A0A1E);  // fundo profundo (cor 0 da paleta)
+  background(paleta[0]);
 
   updateAudio();
 
