@@ -1,1 +1,0 @@
-// fazer algo semlehante ao https://ravenkwok.com/189d0/

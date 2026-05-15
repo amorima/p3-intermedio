@@ -1,17 +1,17 @@
 # Output de saveFrame() — não versionar PNGs gerados
-frames/*.png
-frames/*.jpg
-frames/*.tif
+**/frames/*.png
+**/frames/*.jpg
+**/frames/*.tif
 
 # Vídeo exportado
 *.mp4
 *.mov
 
 # Processing / build artifacts
-out/
-build/
-applet/
-*.class
+**/out/
+**/build/
+**/applet/
+**/*.class
 
 # OS
 Thumbs.db
