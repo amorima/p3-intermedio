@@ -55,12 +55,12 @@ void draw() {
   if (layerOn[4]) desenharGabriel2(gL2);
   if (layerOn[5]) desenharGabriel3(gL3);
 
-  if (layerOn[0]) image(aL1, 0, 0);
   if (layerOn[1]) image(aL2, 0, 0);
   if (layerOn[2]) image(aL3, 0, 0);
   if (layerOn[3]) image(gL1, 0, 0);
   if (layerOn[4]) image(gL2, 0, 0);
   if (layerOn[5]) image(gL3, 0, 0);
+  if (layerOn[0]) image(aL1, 0, 0);
 
   if (mostrarHUD) desenharHUD();
 

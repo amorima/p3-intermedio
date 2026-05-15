@@ -34,9 +34,38 @@ float audioEnergy;
 float audioStress;
 float audioCalm = 1.0;
 
+boolean temHardwareMic = false;
+
 void setupAudio() {
+  // Verificar se existe hardware de entrada (microfone)
+  String[] dispositivos = Sound.list();
+  for (String d : dispositivos) {
+    // Procura o padrão "(X in" no texto do dispositivo
+    String[] m = match(d, "(\\d+)\\s+in");
+    if (m != null && m.length >= 2) {
+      int channels = int(m[1]);
+      if (channels > 0) {
+        temHardwareMic = true;
+        break;
+      }
+    }
+  }
+
+  if (!temHardwareMic) {
+    println("AVISO: Nenhum dispositivo de entrada de áudio (microfone) detectado via Sound.list().");
+  }
+
   musica = new SoundFile(this, "limit.mp3");
-  mic    = new AudioIn(this, 0);
+  // Só inicializamos o mic se houver hardware, para evitar avisos desnecessários
+  if (temHardwareMic) {
+    try {
+      mic = new AudioIn(this, 0);
+    } catch (Exception e) {
+      println("AVISO: Falha ao instanciar AudioIn mesmo com hardware detectado: " + e.getMessage());
+      temHardwareMic = false;
+    }
+  }
+  
   amp    = new Amplitude(this);
   fft    = new FFT(this, FFT_BANDS);
   beat   = new BeatDetector(this);
@@ -46,27 +75,53 @@ void setupAudio() {
 }
 
 void ligarAnalisadores(SoundFile src) {
-  amp.input(src);
-  fft.input(src);
-  beat.input(src);
+  if (src != null) {
+    amp.input(src);
+    fft.input(src);
+    beat.input(src);
+  }
 }
 
 void ligarAnalisadores(AudioIn src) {
-  amp.input(src);
-  fft.input(src);
-  beat.input(src);
+  if (src != null) {
+    amp.input(src);
+    fft.input(src);
+    beat.input(src);
+  }
 }
 
 void alternarFonteAudio() {
-  usarMic = !usarMic;
-  if (usarMic) {
-    musica.pause();
-    mic.start();
-    ligarAnalisadores(mic);
+  if (!usarMic) {
+    // Tentar mudar de Música para Microfone
+    if (!temHardwareMic || mic == null) {
+      println("ERRO: Não é possível mudar para o Microfone (hardware não detectado).");
+      return; 
+    }
+
+    try {
+      mic.start();
+      if (musica.isPlaying()) {
+        musica.pause();
+      }
+      ligarAnalisadores(mic);
+      usarMic = true;
+      println("Fonte de áudio alterada para: MICROFONE");
+    } catch (Exception e) {
+      System.err.println("AVISO: Falha ao iniciar o microfone.");
+      usarMic = false;
+      // Fallback para música se falhar
+      if (!musica.isPlaying()) musica.loop();
+      ligarAnalisadores(musica);
+    }
   } else {
-    mic.stop();
-    musica.play();
+    // Mudar de Microfone para Música
+    if (mic != null) mic.stop();
+    if (!musica.isPlaying()) {
+      musica.loop();
+    }
     ligarAnalisadores(musica);
+    usarMic = false;
+    println("Fonte de áudio alterada para: MÚSICA");
   }
 }
 
