@@ -52,12 +52,13 @@ void draw() {
   if (a1TransitionState == 1 && a1TransitionFactor >= 1.0) {
     // Chegámos ao ponto em que o círculo tapa tudo. Trocamos os layers por baixo.
     
-    // 1. Desligar layers de conteúdo do Antonio (2 e 3)
-    layerOn[1] = false;
-    layerOn[2] = false;
+    // 1. Desligar todos os layers de conteúdo (2 a 6)
+    for (int i = 1; i < 6; i++) {
+      layerOn[i] = false;
+    }
     
     // 2. Ligar o alvo
-    if (a1TargetLayer != -1) {
+    if (a1TargetLayer >= 1 && a1TargetLayer <= 5) {
       layerOn[a1TargetLayer] = true;
     }
     
@@ -109,18 +110,44 @@ String estadoLayers() {
 }
 
 void keyPressed() {
-  // 2..6 → ligar/desligar cada layer (1 é permanente)
-  if (key >= '2' && key <= '6') layerOn[key - '1'] = !layerOn[key - '1'];
+  // 2..6 → ligar/desligar cada layer manualmente (1 é permanente)
+  if (key >= '2' && key <= '6') {
+    int idx = key - '1';
+    // Desliga os outros de conteúdo para manter coerência
+    for (int i = 1; i < 6; i++) if (i != idx) layerOn[i] = false;
+    layerOn[idx] = !layerOn[idx];
+  }
   
-  // Setas para transição
+  // Setas para transição sequencial
   if (key == CODED) {
+    // Descobrir qual é o layer de conteúdo atualmente ativo (2 a 6)
+    int currentActive = -1;
+    for (int i = 1; i < 6; i++) {
+      if (layerOn[i]) {
+        currentActive = i;
+        break;
+      }
+    }
+
     if (keyCode == RIGHT) {
-      // Se não houver nada ativo, vai para o 2. Se estiver no 2, vai para o 3. Se estiver no 3, volta ao 2.
-      int target = layerOn[2] ? 1 : 2; 
+      // Próximo layer
+      int target;
+      if (currentActive == -1) {
+        target = 1; // De "só Layer 1" para Layer 2 (index 1)
+      } else {
+        target = currentActive + 1;
+        if (target > 5) target = -1; // De Layer 6 volta para "só Layer 1"
+      }
       iniciarTransicaoA1(target);
     } else if (keyCode == LEFT) {
-      // O mesmo para a esquerda
-      int target = layerOn[1] ? 2 : 1;
+      // Layer anterior
+      int target;
+      if (currentActive == -1) {
+        target = 5; // De "só Layer 1" para Layer 6 (index 5)
+      } else {
+        target = currentActive - 1;
+        if (target < 0) target = -1; // De Layer 2 para "só Layer 1"
+      }
       iniciarTransicaoA1(target);
     }
   }
