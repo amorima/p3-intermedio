@@ -48,23 +48,42 @@ void draw() {
 
   updateAudio();
 
-  if (layerOn[0]) desenharAntonio1(aL1);
+  // --- Lógica de Troca de Layer no Pico da Transição ---
+  if (a1TransitionState == 1 && a1TransitionFactor >= 1.0) {
+    // Chegámos ao ponto em que o círculo tapa tudo. Trocamos os layers por baixo.
+    
+    // 1. Desligar layers de conteúdo do Antonio (2 e 3)
+    layerOn[1] = false;
+    layerOn[2] = false;
+    
+    // 2. Ligar o alvo
+    if (a1TargetLayer != -1) {
+      layerOn[a1TargetLayer] = true;
+    }
+    
+    // 3. Passar para a fase de encolher
+    a1TransitionState = 2; 
+  }
+
+  // Layer 1 está SEMPRE ativo como overlay
+  desenharAntonio1(aL1);
   if (layerOn[1]) desenharAntonio2(aL2);
   if (layerOn[2]) desenharAntonio3(aL3);
   if (layerOn[3]) desenharGabriel1(gL1);
   if (layerOn[4]) desenharGabriel2(gL2);
   if (layerOn[5]) desenharGabriel3(gL3);
 
+  // Ordem de desenho: Conteúdo primeiro, Overlay (L1) por último
   if (layerOn[1]) image(aL2, 0, 0);
   if (layerOn[2]) image(aL3, 0, 0);
   if (layerOn[3]) image(gL1, 0, 0);
   if (layerOn[4]) image(gL2, 0, 0);
   if (layerOn[5]) image(gL3, 0, 0);
-  if (layerOn[0]) image(aL1, 0, 0);
+  
+  // Layer 1 sempre visível e no topo
+  image(aL1, 0, 0);
 
   if (mostrarHUD) desenharHUD();
-
-  // saveFrame("frames/frame-####.png");  // descomentar para gravar
 }
 
 void desenharHUD() {
@@ -84,14 +103,28 @@ void desenharHUD() {
 }
 
 String estadoLayers() {
-  String s = "";
-  for (int i = 0; i < 6; i++) s += layerOn[i] ? (i+1) : "-";
+  String s = "1"; // Layer 1 sempre ON
+  for (int i = 1; i < 6; i++) s += layerOn[i] ? (i+1) : "-";
   return s;
 }
 
 void keyPressed() {
-  // 1..6 → ligar/desligar cada layer
-  if (key >= '1' && key <= '6') layerOn[key - '1'] = !layerOn[key - '1'];
+  // 2..6 → ligar/desligar cada layer (1 é permanente)
+  if (key >= '2' && key <= '6') layerOn[key - '1'] = !layerOn[key - '1'];
+  
+  // Setas para transição
+  if (key == CODED) {
+    if (keyCode == RIGHT) {
+      // Se não houver nada ativo, vai para o 2. Se estiver no 2, vai para o 3. Se estiver no 3, volta ao 2.
+      int target = layerOn[2] ? 1 : 2; 
+      iniciarTransicaoA1(target);
+    } else if (keyCode == LEFT) {
+      // O mesmo para a esquerda
+      int target = layerOn[1] ? 2 : 1;
+      iniciarTransicaoA1(target);
+    }
+  }
+
   // m → música ⇄ microfone
   if (key == 'm' || key == 'M') alternarFonteAudio();
   // h → mostrar/esconder HUD

@@ -68,6 +68,21 @@ void desenharAntonio3(PGraphics pg) {
                  * A3_WAVE_AMP * (0.25 + audioCalm * 0.9);
       cy += wave;
 
+      // --- Convergência para o centro horizontal ---
+      // Faz com que as linhas se aproximem do centro vertical à medida que chegam ao centro do ecrã
+      float centerX = pg.width * 0.5;
+      float centerY = ribbonY + ribbonH * 0.5;
+      float distToCenterX = abs(cx - centerX);
+      
+      // Fator de convergência: 1.0 no centro (totalmente convergido), 0.0 longe
+      float convergeFactor = map(distToCenterX, 0, pg.width * 0.45, 1.0, 0.0);
+      convergeFactor = constrain(convergeFactor, 0, 1.0);
+      // Aplicar easing para ser mais suave (opcional, mas fica melhor)
+      convergeFactor = pow(convergeFactor, 1.5);
+
+      // Interpolar a posição Y atual para o centro do ribbon
+      cy = lerp(cy, centerY, convergeFactor * 0.85); // 0.85 para não colapsar totalmente se preferires
+
       desenharCelulaA3(pg, cx, cy, cellW, cellH, idx);
     }
   }
@@ -101,6 +116,15 @@ void desenharCelulaA3(PGraphics pg, float cx, float cy, float cellW, float cellH
 
   pg.pushMatrix();
   pg.translate(cx, cy);
+
+  // --- Efeito de escala por proximidade ao centro ---
+  // Quanto mais perto do (width/2, height/2), mais pequeno.
+  float d = dist(cx, cy, pg.width * 0.5, pg.height * 0.5);
+  // Definimos que a "distância de normalização" é 40% da largura.
+  // Perto de 0px de distância -> escala 0.15; a partir de ~40% da largura -> escala 1.0
+  float sFactor = map(d, 0, pg.width * 0.4, 0.15, 1.0);
+  sFactor = constrain(sFactor, 0.15, 1.0);
+  pg.scale(sFactor);
 
   pg.noFill();
   pg.stroke(c, 230);
