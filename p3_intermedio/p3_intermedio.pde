@@ -31,7 +31,7 @@ boolean mostrarHUD = false;
 void setup() {
   size(1920, 1080);
   smooth(8);
-  surface.setLocation(10, 10);
+  surface.setLocation((displayWidth - width) / 2, (displayHeight - height) / 2);
   frameRate(25);
 
   setupAudio();
