@@ -26,10 +26,11 @@ color[] paleta = {
 };
 
 // --- HUD de debug ---
-boolean mostrarHUD = true;
+boolean mostrarHUD = false;
 
 void setup() {
-  size(1920, 1080, P2D);
+  size(1920, 1080);
+  smooth(8);
   surface.setLocation(10, 10);
   frameRate(25);
 
