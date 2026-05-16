@@ -127,15 +127,10 @@ class NodeA2 {
       case 0: drawStyleCircle(pg); break;
       case 1: drawStyleStadium(pg); break;
       case 2: drawStyleSpeaker(pg); break;
-      case 3: drawStyleChamfer(pg); break;
+      case 3: drawStyleOrganic(pg); break;
       case 4: drawStyleGrid(pg); break;
     }
     
-    if (life > 0.1) {
-      pg.fill(255, life * 150);
-      pg.noStroke();
-      pg.rect(0, 0, w, h);
-    }
     pg.popMatrix();
   }
 
@@ -182,21 +177,20 @@ class NodeA2 {
     pg.ellipse(w*0.5, h*0.5, d * (0.7 + audioBass * 0.3), d * (0.7 + audioBass * 0.3));
   }
 
-  // ESTILO 3: Chanfro (Cantos cortados)
-  void drawStyleChamfer(PGraphics pg) {
-    pg.fill(cor, 180);
+  // ESTILO 3: Forma Orgânica / Cápsula Suave
+  void drawStyleOrganic(PGraphics pg) {
+    pg.fill(cor, 180 + audioBass * 40);
     pg.noStroke();
-    float c = min(w, h) * 0.2; // tamanho do chanfro
-    pg.beginShape();
-    pg.vertex(c, 0);
-    pg.vertex(w - c, 0);
-    pg.vertex(w, c);
-    pg.vertex(w, h - c);
-    pg.vertex(w - c, h);
-    pg.vertex(c, h);
-    pg.vertex(0, h - c);
-    pg.vertex(0, c);
-    pg.endShape(CLOSE);
+    // Usa o menor lado para definir o arredondamento total (cápsula)
+    float r = min(w, h);
+    pg.rect(1, 1, w-2, h-2, r * 0.5);
+    
+    // Detalhe interno "líquido"
+    if (audioStress > 0.4) {
+      pg.fill(255, 40);
+      float pulse = r * 0.2 * audioBass;
+      pg.ellipse(w*0.5, h*0.5, r*0.3 + pulse, r*0.3 + pulse);
+    }
   }
 
   // ESTILO 4: Grelha Técnica / Data
