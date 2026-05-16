@@ -3,24 +3,48 @@
 // Renders a living, breathing isometric crystal that grows and collapses in
 // real time, driven entirely by audio input.
 
-// --- Configuração da Grelha Isométrica ---
-final int G2_GRID_SIZE = 25; // Tamanho da grelha (25x25)
-final float G2_CELL_SCALE = 40; // Tamanho de cada célula isométrica
+// =========================================================================
+// --- CONFIGURAÇÃO DE FINE-TUNING ---
+// =========================================================================
 
-// --- Cores (consistente com a paleta do projeto) ---
-final color G2_COLOR_TOP = #00DCFF;   // Ciano para o topo
-final color G2_COLOR_LEFT = #B400FF;  // Violeta para a esquerda
-final color G2_COLOR_RIGHT = #FF3C6E; // Magenta para a direita
+// --- Grelha e Tamanho ---
+final int   G2_GRID_SIZE        = 30;    // Resolução da grelha (células). Mais alto = mais detalhe, mais pesado.
+final float G2_CELL_SCALE       = 40;    // Tamanho base de cada cubo isométrico em pixels.
+final int   G2_MIN_SIZE         = 1;     // Tamanho mínimo do cristal (núcleo central).
+final int   G2_MAX_SIZE_FACTOR  = 2;     // O tamanho máx é GRID_SIZE / MAX_SIZE_FACTOR. 2 = metade, 3 = um terço.
 
-// --- Estado do Cristal ---
+// --- Cores e Intensidade ---
+final color G2_COLOR_TOP          = #00DCFF; // Cor para a face de topo dos cubos.
+final color G2_COLOR_LEFT         = #B400FF; // Cor para a face esquerda.
+final color G2_COLOR_RIGHT        = #FF3C6E; // Cor para a face direita.
+final float G2_BASE_ALPHA         = 200;   // Transparência base das faces (0-255).
+final float G2_STRESS_ALPHA_BOOST = 0.5;   // Boost de alpha com 'audioStress' (0.0 a 1.0). 0.5 = 50% do stress é adicionado.
+
+// --- Reatividade ao Áudio ---
+final float G2_GROWTH_SPEED_MIDS  = 0.1;   // Velocidade de crescimento com 'audioMids'.
+final float G2_SHRINK_SPEED_CALM  = 0.02;  // Velocidade de contração com 'audioCalm'.
+final float G2_FACE_FLIP_RATE_MIDS  = 0.2;   // Taxa de piscar das faces com 'audioMids'.
+final float G2_FACE_FLIP_RATE_STRESS= 0.1;   // Taxa de piscar adicional com 'audioStress'.
+
+// --- Efeito de Beat ---
+final int   G2_BEAT_SIZE_BOOST    = 3;     // Impulso de tamanho instantâneo no beat.
+final float G2_BEAT_FLASH_DECAY   = 0.08;  // Velocidade com que o flash do beat desaparece.
+final float G2_BEAT_FLASH_SCALE   = 300;   // Tamanho máximo do flash do beat.
+
+// --- Modo Prisma ---
+final float G2_PRISMA_DEPTH_BASS  = 0.5;   // Profundidade do relevo no modo prisma, multiplicada pelo 'audioBass'.
+final float G2_PRISMA_TRANSITION  = 0.05;  // Velocidade da transição para o modo prisma.
+
+// =========================================================================
+// --- ESTADO INTERNO DO LAYER (não mexer) ---
+// =========================================================================
 IsoCube[][] g2Grid = new IsoCube[G2_GRID_SIZE][G2_GRID_SIZE];
-int g2TargetSize = 1;
-float g2CurrentSize = 1;
+int g2TargetSize = G2_MIN_SIZE;
+float g2CurrentSize = G2_MIN_SIZE;
 float g2PrismaFactor = 0; // 0: flat, 1: prisma
 boolean g2PrismaMode = false;
-
-// --- Efeitos ---
 float g2BeatFlash = 0;
+
 
 void resetGabriel2() {
   for (int q = 0; q < G2_GRID_SIZE; q++) {
@@ -38,27 +62,28 @@ void desenharGabriel2(PGraphics pg) {
   }
 
   // --- Lógica de Crescimento e Contração ---
-  g2TargetSize = 1 + floor(audioAmp * (G2_GRID_SIZE / 2 - 2));
+  int maxSize = G2_GRID_SIZE / G2_MAX_SIZE_FACTOR - 2;
+  g2TargetSize = G2_MIN_SIZE + floor(audioAmp * maxSize);
   if (audioBeat) {
-    g2TargetSize += 3;
+    g2TargetSize += G2_BEAT_SIZE_BOOST;
     g2BeatFlash = 1.0;
   }
-  g2TargetSize = constrain(g2TargetSize, 1, G2_GRID_SIZE / 2 - 2);
+  g2TargetSize = constrain(g2TargetSize, G2_MIN_SIZE, maxSize);
 
-  float growthSpeed = (audioMids * 0.1) + (audioCalm * 0.02);
+  float growthSpeed = (audioMids * G2_GROWTH_SPEED_MIDS) + (audioCalm * G2_SHRINK_SPEED_CALM);
   g2CurrentSize = lerp(g2CurrentSize, g2TargetSize, growthSpeed);
 
   // --- Atualizar Estado dos Cubos ---
   int center = G2_GRID_SIZE / 2;
   for (int q = 0; q < G2_GRID_SIZE; q++) {
     for (int r = 0; r < G2_GRID_SIZE; r++) {
-      int dist = max(abs(q - center), abs(r - center));
+      int dist = hexDistance(q, r, center, center);
       g2Grid[q][r].update(dist < g2CurrentSize, audioMids, audioStress);
     }
   }
   
   // --- Lógica do Modo Prisma ---
-  g2PrismaFactor = lerp(g2PrismaFactor, g2PrismaMode ? 1.0 : 0.0, 0.05);
+  g2PrismaFactor = lerp(g2PrismaFactor, g2PrismaMode ? 1.0 : 0.0, G2_PRISMA_TRANSITION);
 
   // --- Desenho ---
   pg.beginDraw();
@@ -78,11 +103,19 @@ void desenharGabriel2(PGraphics pg) {
   if (g2BeatFlash > 0) {
     pg.fill(255, 255 * g2BeatFlash);
     pg.noStroke();
-    pg.ellipse(0, 0, 300 * (1.0 - g2BeatFlash), 300 * (1.0 - g2BeatFlash));
-    g2BeatFlash -= 0.08;
+    pg.ellipse(0, 0, G2_BEAT_FLASH_SCALE * (1.0 - g2BeatFlash), G2_BEAT_FLASH_SCALE * (1.0 - g2BeatFlash));
+    g2BeatFlash -= G2_BEAT_FLASH_DECAY;
   }
 
   pg.endDraw();
+}
+
+// Calcula a distância hexagonal (distância de Manhattan em coordenadas cúbicas)
+int hexDistance(int q1, int r1, int q2, int r2) {
+  int dq = abs(q1 - q2);
+  int dr = abs(r1 - r2);
+  int ds = abs((-q1 - r1) - (-q2 - r2));
+  return (dq + dr + ds) / 2;
 }
 
 // Alternar modo prisma (pode ser chamado via keyPressed no .pde principal)
@@ -121,7 +154,7 @@ class IsoCube {
     active = true;
 
     // Lógica de piscar das faces
-    float flipRate = mids * 0.2 + stress * 0.1;
+    float flipRate = mids * G2_FACE_FLIP_RATE_MIDS + stress * G2_FACE_FLIP_RATE_STRESS;
     if (random(1) < flipRate) topOn = !topOn;
     if (random(1) < flipRate) leftOn = !leftOn;
     if (random(1) < flipRate) rightOn = !rightOn;
@@ -138,7 +171,7 @@ class IsoCube {
     pg.translate(x, y);
     pg.scale(life); // Efeito de aparecer/desaparecer
 
-    float prismaDepth = audioBass * G2_CELL_SCALE * 0.5 * g2PrismaFactor;
+    float prismaDepth = audioBass * G2_CELL_SCALE * G2_PRISMA_DEPTH_BASS * g2PrismaFactor;
 
     // Face do Topo (Ciano)
     if (topOn) {
@@ -168,7 +201,8 @@ class IsoCube {
     PVector center = new PVector(0, -s/2 + prisma);
 
     pg.noStroke();
-    pg.fill(c, 200 * life * (0.5 + audioStress * 0.5));
+    float alpha = G2_BASE_ALPHA * life * (1.0 - G2_STRESS_ALPHA_BOOST + audioStress * G2_STRESS_ALPHA_BOOST);
+    pg.fill(c, alpha);
 
     if (g2PrismaFactor > 0.01) {
       // Modo Prisma
