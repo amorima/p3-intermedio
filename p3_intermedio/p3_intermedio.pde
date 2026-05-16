@@ -11,6 +11,7 @@ boolean usarMic = false;
 // --- Layers (1 por separador, 3 por aluno) ---
 PGraphics aL1, aL2, aL3;
 PGraphics gL1, gL2, gL3;
+boolean a2Mode3D = false;
 
 // Visibilidade — só Antonio1 ligada à partida; 1..6 alterna no teclado
 boolean[] layerOn = { true, false, false, false, false, false };
@@ -29,7 +30,7 @@ color[] paleta = {
 boolean mostrarHUD = false;
 
 void setup() {
-  size(1920, 1080);
+  size(1920, 1080, P2D);
   smooth(8);
   surface.setLocation((displayWidth - width) / 2, (displayHeight - height) / 2);
   frameRate(25);
@@ -37,7 +38,7 @@ void setup() {
   setupAudio();
 
   aL1 = createGraphics(width, height);
-  aL2 = createGraphics(width, height);
+  aL2 = createGraphics(width, height, P3D);
   aL3 = createGraphics(width, height);
   gL1 = createGraphics(width, height);
   gL2 = createGraphics(width, height);
@@ -157,6 +158,8 @@ void keyPressed() {
   if (key == 'm' || key == 'M') alternarFonteAudio();
   // h → mostrar/esconder HUD
   if (key == 'h' || key == 'H') mostrarHUD = !mostrarHUD;
+  // a → alternar 3D no Layer 2
+  if ((key == 'a' || key == 'A') && layerOn[1]) a2Mode3D = !a2Mode3D;
   // r → reiniciar layer Antonio1
   if (key == 'r' || key == 'R') resetAntonio1();
 }
