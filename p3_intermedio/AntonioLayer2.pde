@@ -16,9 +16,10 @@ float a2RotX = 0;
 float a2RotY = 0;
 
 void resetAntonio2() {
-  // Criamos o buffer com a resolução nativa para o 2D ficar perfeito
   a2Root = new NodeA2(0, 0, 1920, 1080, 0, 0); 
-  a2FaceBuffer = createGraphics(1920, 1080, P2D);
+  // Usamos JAVA2D (default) para o buffer de face para garantir suavidade nas curvas vetoriais
+  a2FaceBuffer = createGraphics(1920, 1080);
+  a2FaceBuffer.smooth(8);
 }
 
 void desenharAntonio2(PGraphics pg) {
@@ -46,7 +47,7 @@ void desenharAntonio2(PGraphics pg) {
 
   // 2. Renderizar no buffer (sempre na resolução nativa)
   a2FaceBuffer.beginDraw();
-  a2FaceBuffer.clear();
+  a2FaceBuffer.clear(); // Garantir transparência total real
   a2Root.draw(a2FaceBuffer);
   a2FaceBuffer.endDraw();
 
@@ -55,14 +56,13 @@ void desenharAntonio2(PGraphics pg) {
   pg.clear();
 
   if (!a2Mode3D) {
-    // MODO 2D: Desenha o buffer 1:1, sem distorção
     pg.image(a2FaceBuffer, 0, 0);
   } else {
-    // MODO 3D: Desenha o cubo maior e mais fluido
     pg.pushMatrix();
+    // Centrar o cubo de forma absoluta no buffer P3D
     pg.translate(pg.width/2, pg.height/2, -400);
     
-    // Rotação Smooth (Interpolação)
+    // Rotação Smooth
     float targetRotX = sin(frameCount * 0.005) * 0.4 + audioBass * 0.3;
     float targetRotY = frameCount * 0.01;
     a2RotX = lerp(a2RotX, targetRotX, 0.05);
@@ -71,9 +71,15 @@ void desenharAntonio2(PGraphics pg) {
     pg.rotateX(a2RotX);
     pg.rotateY(a2RotY);
     
-    // Desenha um cubo maior (1000 pixels de lado)
+    // MÁGICA 3D: Desativar a máscara de profundidade (Z-buffer writing)
+    // Isto permite que as faces transparentes do cubo não bloqueiem as faces de trás!
+    pg.hint(DISABLE_DEPTH_MASK);
+    pg.tint(255);
+    pg.fill(255);
+    
     desenharCubo(pg, 1000);
     
+    pg.hint(ENABLE_DEPTH_MASK);
     pg.popMatrix();
   }
 
@@ -85,10 +91,8 @@ void desenharCubo(PGraphics pg, float dim) {
   pg.textureMode(NORMAL);
   pg.noStroke();
   
-  // Usamos apenas a parte central (quadrada) do buffer para as faces do cubo
-  // UVs: (0.23, 0) a (0.76, 1) para manter o aspecto quadrado num buffer 1920x1080
-  float uStart = 0.2395; 
-  float uEnd = 0.7604;
+  float uStart = 0.21875; 
+  float uEnd = 0.78125;
   
   // Frente
   pg.beginShape(QUADS);
@@ -234,7 +238,7 @@ class NodeA2 {
 
   void drawStyleCircle(PGraphics pg) {
     pg.noStroke();
-    pg.fill(cor, 200 + audioBass * 55);
+    pg.fill(cor, 255); // Opacidade total
     float d = min(w, h) * (0.8 + audioBass * 0.15);
     pg.ellipse(w*0.5, h*0.5, d, d);
   }
@@ -242,30 +246,33 @@ class NodeA2 {
   void drawStyleStadium(PGraphics pg) {
     pg.noFill();
     pg.stroke(cor, 255);
-    pg.strokeWeight(1.5 + audioTreble * 3);
+    pg.strokeWeight(3.0 + audioTreble * 5); // Traço bem definido
     float r = min(w, h) * 0.4;
     pg.rect(2, 2, w-4, h-4, r);
   }
 
   void drawStyleSpeaker(PGraphics pg) {
-    pg.fill(cor, 40 + audioBass * 100);
+    pg.fill(cor, 180 + audioBass * 75); 
     pg.noStroke();
-    pg.rect(1, 1, w-2, h-2);
-    pg.fill(paleta[0]);
-    float d = min(w, h) * 0.6;
+    float d = min(w, h) * 0.8;
     pg.ellipse(w*0.5, h*0.5, d, d);
+    
+    pg.noFill();
+    pg.stroke(255);
+    pg.strokeWeight(1.5 + audioTreble * 2);
+    pg.ellipse(w*0.5, h*0.5, d*0.5, d*0.5);
   }
 
   void drawStyleOrganic(PGraphics pg) {
-    pg.fill(cor, 180 + audioBass * 40);
+    pg.fill(cor, 255); // Opacidade total
     pg.noStroke();
     float r = min(w, h);
     pg.rect(1, 1, w-2, h-2, r * 0.5);
   }
 
   void drawStyleGrid(PGraphics pg) {
-    pg.stroke(cor, 150);
-    pg.strokeWeight(0.5);
+    pg.stroke(cor, 255); // Opacidade total
+    pg.strokeWeight(1.5);
     int cols = 3;
     int rows = 3;
     float stepW = w / cols;

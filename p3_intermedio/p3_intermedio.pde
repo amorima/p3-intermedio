@@ -38,11 +38,17 @@ void setup() {
   setupAudio();
 
   aL1 = createGraphics(width, height);
+  aL1.smooth(8);
   aL2 = createGraphics(width, height, P3D);
+  aL2.smooth(8);
   aL3 = createGraphics(width, height);
+  aL3.smooth(8);
   gL1 = createGraphics(width, height);
+  gL1.smooth(8);
   gL2 = createGraphics(width, height);
+  gL2.smooth(8);
   gL3 = createGraphics(width, height);
+  gL3.smooth(8);
 }
 
 void draw() {
